@@ -1,0 +1,40 @@
+[gd_scene load_steps=6 format=3 uid="uid://bf8a6dubrytb2"]
+
+[ext_resource type="Script" uid="uid://btn8i0m76hx2y" path="res://ref/Scripts/Camera/debug_camera_controller.gd" id="1_8uh7m"]
+[ext_resource type="Script" uid="uid://c5mp21a1dgle8" path="res://code/terrain_script.gd" id="2_8uh7m"]
+
+[sub_resource type="Environment" id="Environment_8uh7m"]
+background_mode = 1
+background_color = Color(0.239216, 0.239216, 0.239216, 1)
+tonemap_exposure = 1.68
+glow_enabled = true
+glow_normalized = true
+glow_intensity = 1.75
+glow_strength = 1.65
+glow_bloom = 0.33
+
+[sub_resource type="CompositorEffect" id="CompositorEffect_6uqi0"]
+resource_local_to_scene = false
+resource_name = ""
+enabled = true
+effect_callback_type = 4
+needs_motion_vectors = false
+needs_normal_roughness = false
+script = ExtResource("2_8uh7m")
+create_fb = true
+metadata/_custom_type_script = "uid://c5mp21a1dgle8"
+
+[sub_resource type="Compositor" id="Compositor_ykrsh"]
+compositor_effects = Array[CompositorEffect]([SubResource("CompositorEffect_6uqi0")])
+
+[node name="Test" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(0.998381, 0, -0.0568839, 0, 1, 0, 0.0568839, 0, 0.998381, 0, 0, 0)
+script = ExtResource("1_8uh7m")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_8uh7m")
+compositor = SubResource("Compositor_ykrsh")
