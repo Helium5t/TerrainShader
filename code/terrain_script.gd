@@ -3,6 +3,12 @@ class_name HeliumTerrain extends CompositorEffect
 
 @export var create_fb : bool = true
 
+@export_group("Mesh Generation")
+@export var dynamic_mesh : bool = false
+
+@export_range(1,1000, 1, "or_greater") var plane_size : int = 100
+
+
 # Geometry and Scene vars (for Uniforms)
 var transform : Transform3D
 var main_light : DirectionalLight3D
@@ -53,8 +59,8 @@ func compile_shaders(v_s : String, f_s : String) -> RID:
 
 
 func load_shaders() -> Array[String]:
-    var vertex_path : String =   "./code/terrain.v"
-    var fragment_path : String = "./code/terrain.f"
+    var vertex_path : String =   "res://code/terrain.v"
+    var fragment_path : String = "res://code/terrain.f"
     assert(FileAccess.file_exists(vertex_path), "vertex shader does not exist")
     var file = FileAccess.open(vertex_path, FileAccess.READ)
     var v = file.get_as_text()
@@ -65,14 +71,22 @@ func load_shaders() -> Array[String]:
     file.close()
     return [v, f]
 
+func create_vertices() -> PackedFloat32Array:
+    if not dynamic_mesh:
+        return PackedFloat32Array(
+            [-0.5,0.5, 0.5,
+            -0.5,-0.5, 0.5,
+            0.5, -0.5, 0.5,
+            0.5, 0.5, 0.5,]
+        )
+    
+    
+    return PackedFloat32Array()
+    
+
 func create_vertex_and_index_buffers():
     # Vertex
-    var v_buffer := PackedFloat32Array(
-        [-0.5,0.5, 0.5,
-         -0.5,-0.5, 0.5,
-         0.5, -0.5, 0.5,
-         0.5, 0.5, 0.5,]
-    )
+    var v_buffer := create_vertices()
 
     var v_count = v_buffer.size() / 3
     print("Vertex Count: " + str(v_count))
@@ -111,7 +125,7 @@ func create_vertex_and_index_buffers():
 
 func create_bind_uniform_buffers(render_data: RenderData):
 
-    var ubo_buffer = Array()
+    var ubo_buffer = [];
     var model = transform
     var scene_data : RenderSceneDataRD = render_data.get_render_scene_data() # used for getting the mvp matrix from godot
     var view = scene_data.get_cam_transform().inverse()
@@ -119,23 +133,23 @@ func create_bind_uniform_buffers(render_data: RenderData):
 
     var obj_to_view = Projection(view * model)
     var obj_to_clip = proj * obj_to_view
-
     for i in range(0, 16):
         ubo_buffer.push_back(obj_to_clip[i/4][i%4])
 
-    var ubo_buffer_b = ubo_buffer.to_byte_array()
+    var ubo_buffer_b = PackedFloat32Array(ubo_buffer).to_byte_array()
     device_ubo_buffer = r_device.uniform_buffer_create(ubo_buffer_b.size(), ubo_buffer_b)
     var uniforms = []
     var ubo := RDUniform.new()
     ubo.binding = 0
     ubo.uniform_type = r_device.UNIFORM_TYPE_UNIFORM_BUFFER
     ubo.add_id(device_ubo_buffer)
-    uniforms.push_back(uniforms)
+    uniforms.push_back(ubo)
+    assert(len(uniforms) > 0, "uniform array is empty");
 
     if device_uniform_set.is_valid():
         r_device.free_rid(device_uniform_set)
-    
     device_uniform_set = r_device.uniform_set_create(uniforms, shader_id, 0)
+    assert(device_uniform_set.get_id() != 0, "uniform set is 0");
         
 
     
@@ -204,11 +218,10 @@ func build_bind_draw_commands():
     var draw_list = r_device.draw_list_begin(device_framebuffer, r_device.DRAW_DEFAULT_ALL, clear_cols, 1.0,0 , Rect2(), 0)
 
     r_device.draw_list_bind_render_pipeline(draw_list, device_render_pipeline)
-
+    
+    # Buffers
     r_device.draw_list_bind_vertex_array(draw_list, device_v_array)
-
     r_device.draw_list_bind_index_array(draw_list, device_idx_array)
-
     r_device.draw_list_bind_uniform_set(draw_list, device_uniform_set, 0)
 
     r_device.draw_list_draw(draw_list, true, 1, 0)
