@@ -6,8 +6,9 @@ class_name HeliumTerrain extends CompositorEffect
 @export_group("Mesh Generation")
 @export var dynamic_mesh : bool = false
 
-@export_range(1,1000, 1, "or_greater") var plane_size : int = 100
+@export_range(1,1000, 1, "or_greater") var vertex_density : int = 5
 
+@export_range(0.01, 1.0, 0.01, "or_greater") var plane_scale : float = 1.0
 
 # Geometry and Scene vars (for Uniforms)
 var transform : Transform3D
@@ -71,17 +72,27 @@ func load_shaders() -> Array[String]:
     file.close()
     return [v, f]
 
-func create_vertices() -> PackedFloat32Array:
+func create_vertices() -> Array[Array]:
     if not dynamic_mesh:
-        return PackedFloat32Array(
+        return [PackedFloat32Array(
             [-0.5,0.5, 0.5,
             -0.5,-0.5, 0.5,
             0.5, -0.5, 0.5,
             0.5, 0.5, 0.5,]
-        )
-    
-    
-    return PackedFloat32Array()
+        ), PackedInt32Array([
+            0,1,2,2,3,0
+        ])]
+    var v := []
+    var i := []
+    for x in vertex_density:
+        for y in vertex_density:
+            v.append_array([plane_scale*x, plane_scale*y, 1 ])
+            if x==0 or y == 0:
+                continue
+            i.append_array([x*vertex_density + y, (x-1)*vertex_density + y, (x-1)*vertex_density + y -1])
+            i.append_array([(x-1)*vertex_density + y -1, x*vertex_density + y -1, x*vertex_density + y])
+    # print(v)
+    return [v,i]
     
 
 func create_vertex_and_index_buffers():
@@ -156,7 +167,6 @@ func create_bind_uniform_buffers(render_data: RenderData):
 
         
 func create_bind_buffers(render_data : RenderData):
-    print("test")
     create_vertex_and_index_buffers()
     create_bind_uniform_buffers(render_data)
 
