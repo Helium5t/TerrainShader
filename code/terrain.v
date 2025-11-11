@@ -7,13 +7,13 @@ layout(set = 0, binding = 0, std140) uniform UBO{
 };
 
 // This is what the vertex shader will output and send to the fragment shader.
-layout(location = 0) out vec3 pos;
+layout(location = 0) out vec3 clipPos;
 
 #define PI 3.141592653589793238462
 
 void main() {
     // The fragment shader also calculates the fractional brownian motion for pixel perfect normal vectors and lighting, so we pass the vertex position to the fragment shader
-    pos = a_Position;    
+    clipPos = a_Position;    
     // Multiply final vertex position with model/view/projection matrices to convert to clip space
-    gl_Position = MVP*vec4(pos,1);
+    gl_Position = MVP*vec4(clipPos,1);
 }

@@ -52,9 +52,11 @@ func compile_shaders(v_s : String, f_s : String) -> RID:
     var err = spirv.get_stage_compile_error(RenderingDevice.SHADER_STAGE_VERTEX)
     if err: 
         push_error(err)
+    assert(!err, "Failed to compile vertex shader")
     err = spirv.get_stage_compile_error(RenderingDevice.SHADER_STAGE_FRAGMENT)
     if err:
         push_error(err)
+    assert(!err, "Failed to compile fragment shader")
 
     return r_device.shader_create_from_spirv(spirv)
 
@@ -75,44 +77,37 @@ func load_shaders() -> Array[String]:
 func create_vertices() -> Array[Array]:
     if not dynamic_mesh:
         return [PackedFloat32Array(
-            [-0.5,0.5, 0.5,
-            -0.5,-0.5, 0.5,
-            0.5, -0.5, 0.5,
-            0.5, 0.5, 0.5,]
+            [-0.5, 0, 0.5,
+             -0.5, 0, -0.5,
+             0.5, 0, -0.5,
+             0.5, 0, 0.5,]
         ), PackedInt32Array([
             0,1,2,2,3,0
         ])]
     var v := []
     var i := []
+    var offset := (vertex_density-1) * plane_scale / 2.0
     for x in vertex_density:
-        for y in vertex_density:
-            v.append_array([plane_scale*x, plane_scale*y, 1 ])
-            if x==0 or y == 0:
+        for z in vertex_density:
+            v.append_array([plane_scale*x - offset, 0, plane_scale*z - offset ])
+            if x==0 or z == 0:
                 continue
-            i.append_array([x*vertex_density + y, (x-1)*vertex_density + y, (x-1)*vertex_density + y -1])
-            i.append_array([(x-1)*vertex_density + y -1, x*vertex_density + y -1, x*vertex_density + y])
-    # print(v)
+            i.append_array([x*vertex_density + z, (x-1)*vertex_density + z, (x-1)*vertex_density + z -1])
+            i.append_array([(x-1)*vertex_density + z -1, x*vertex_density + z -1, x*vertex_density + z])
     return [v,i]
     
 
 func create_vertex_and_index_buffers():
     # Vertex
-    var v_buffer := create_vertices()
+    var buffers := create_vertices()
+    var v_buffer : PackedFloat32Array = buffers[0]
+    var i_buffer : PackedInt32Array = buffers[1]
 
     var v_count = v_buffer.size() / 3
-    print("Vertex Count: " + str(v_count))
-    print("Byte Size: " + str(v_buffer.to_byte_array().size()))
-
-    var index_buffer := PackedInt32Array([
-         0,1,2,2,3,0
-    ])
-
-    print("Triangle Count: "+ str(index_buffer.size()/3))
 
     var v_buffer_b : PackedByteArray = v_buffer.to_byte_array()
     device_v_buffer = r_device.vertex_buffer_create(v_buffer_b.size(), v_buffer_b)
     assert(device_v_buffer.is_valid() && device_v_buffer.get_id() != 0, "invalid device vertex buffer")
-    print(device_v_buffer)
     
     var v_buffer_attr = [RDVertexAttribute.new()]
     v_buffer_attr[0].format = r_device.DATA_FORMAT_R32G32B32_SFLOAT
@@ -123,16 +118,15 @@ func create_vertex_and_index_buffers():
 
     v_format = r_device.vertex_format_create(v_buffer_attr)
 
-    device_v_array = r_device.vertex_array_create(4, v_format, [device_v_buffer])
-    assert(device_v_array.get_id() != 0, "vertex array null?")
-    print(device_v_array)
+    device_v_array = r_device.vertex_array_create(v_count, v_format, [device_v_buffer])
+    assert(device_v_array.is_valid() and device_v_array.get_id() != 0, "vertex array null?")
 
     # Index buffer
-    var index_buffer_b : PackedByteArray = index_buffer.to_byte_array()
+    var index_buffer_b : PackedByteArray = i_buffer.to_byte_array()
 
-    device_idx_buffer = r_device.index_buffer_create(6, r_device.INDEX_BUFFER_FORMAT_UINT32, index_buffer_b)
+    device_idx_buffer = r_device.index_buffer_create(i_buffer.size(), r_device.INDEX_BUFFER_FORMAT_UINT32, index_buffer_b)
 
-    device_idx_array = r_device.index_array_create(device_idx_buffer, 0, index_buffer.size())
+    device_idx_array = r_device.index_array_create(device_idx_buffer, 0, i_buffer.size())
 
 func create_bind_uniform_buffers(render_data: RenderData):
 
@@ -171,7 +165,6 @@ func create_bind_buffers(render_data : RenderData):
     create_bind_uniform_buffers(render_data)
 
 func init_render(framebuffer_format : int, render_data : RenderData):
-    print("initializing render")
     var shader_sources = load_shaders()
     assert(shader_sources[0] != null, "idk?")
     shader_id = compile_shaders(shader_sources[0], shader_sources[1])
