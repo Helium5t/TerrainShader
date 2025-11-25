@@ -3,10 +3,15 @@ class_name HeliumTerrain extends CompositorEffect
 
 @export var create_fb : bool = true
 
+@export_group("Rendering")
+@export var show_wireframe : bool = false
+@export_range(0.00, 5.0, 0.01) var displacement_amt : float = 0.0
+@export var noise_seed : int = 1
+
 @export_group("Mesh Generation")
 @export var dynamic_mesh : bool = false
 
-@export_range(1,1000, 1, "or_greater") var vertex_density : int = 5
+@export_range(2,1000, 1, "or_greater") var vertex_density : int = 5
 
 @export_range(0.01, 1.0, 0.01, "or_greater") var plane_scale : float = 1.0
 
@@ -138,8 +143,18 @@ func create_bind_uniform_buffers(render_data: RenderData):
 
     var obj_to_view = Projection(view * model)
     var obj_to_clip = proj * obj_to_view
+
+    # Push values to host buffer
     for i in range(0, 16):
         ubo_buffer.push_back(obj_to_clip[i/4][i%4])
+    ubo_buffer.push_back(displacement_amt * plane_scale)
+    ubo_buffer.push_back(noise_seed)
+
+    # in std140 the base alignment (the one dictating the size) is always 4N, so the size of the buffer
+    # always has to be a multiple of 16
+    while ubo_buffer.size() % 4 != 0: 
+        ubo_buffer.push_back(0)
+    #### 
 
     var ubo_buffer_b = PackedFloat32Array(ubo_buffer).to_byte_array()
     device_ubo_buffer = r_device.uniform_buffer_create(ubo_buffer_b.size(), ubo_buffer_b)
@@ -148,7 +163,10 @@ func create_bind_uniform_buffers(render_data: RenderData):
     ubo.binding = 0
     ubo.uniform_type = r_device.UNIFORM_TYPE_UNIFORM_BUFFER
     ubo.add_id(device_ubo_buffer)
+    
+    # Push host buffer to device
     uniforms.push_back(ubo)
+    #####
     assert(len(uniforms) > 0, "uniform array is empty");
 
     if device_uniform_set.is_valid():
@@ -176,7 +194,7 @@ func init_render(framebuffer_format : int, render_data : RenderData):
 func create_pipeline(format : int) -> void:
     var rasterization = RDPipelineRasterizationState.new()
     rasterization.cull_mode = RenderingDevice.POLYGON_CULL_DISABLED
-    rasterization.wireframe = false
+    rasterization.wireframe = show_wireframe
     rasterization.enable_depth_clamp = false
     rasterization.line_width = 1.0;
     rasterization.front_face = RenderingDevice.POLYGON_FRONT_FACE_CLOCKWISE

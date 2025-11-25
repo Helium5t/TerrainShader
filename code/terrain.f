@@ -1,12 +1,14 @@
 
 #version 450
 
-#define _Seed 17 // TODO: make this a parameter
 #define PI 3.141592653589793238462
 
 layout(location = 0) in vec3 clipPos;
+layout(location = 1) in vec3 vCol;
 layout(set = 0, binding = 0, std140) uniform UBO{
-    mat4 MVP; // 0-15
+    mat4 MVP; // [0-15]
+    float displacementAmount; // 16
+    float noise; // 17
 };
 
 // This is what the fragment shader will output, usually just a pixel color
@@ -20,7 +22,7 @@ float pseudo(vec2 v) {
 }
 
 float hash(vec2 pos) {
-    return pseudo(pos * vec2(_Seed, _Seed*_Seed));
+    return pseudo(pos * vec2(noise, noise * noise));
     // return pseudo(pos.xy);
 }
 
@@ -46,17 +48,22 @@ float perlin(vec2 pos){
     vec2 p2 = vec2(floor(pos.x), ceil(pos.y));
     vec2 p3 = vec2(ceil(pos.x), floor(pos.y));
     vec2 p4 = ceil(pos);
+    // Gradients
     vec2 g1 = randVec2(p1); 
     vec2 g2 = randVec2(p2); 
     vec2 g3 = randVec2(p3); 
     vec2 g4 = randVec2(p4); 
-    float d1 = dot(normalize(pos - p1), g1); // 00
-    float d2 = dot(normalize(pos - p2), g2); // 01
-    float d3 = dot(normalize(pos - p3), g3); // 10
-    float d4 = dot(normalize(pos - p4), g4); // 11
-    float h1 = qerp(d1,d3, pos.x - p1.x);
-    float h2 = qerp(d2,d4, pos.x - p1.x);
-    float h =  qerp(h1,h2, pos.y - p1.y);
+    // Noise values (TODO: optimize the difference)
+    float d1 = dot(pos - p1, g1); // 00
+    float d2 = dot(pos - p2, g2); // 01
+    float d3 = dot(pos - p3, g3); // 10
+    float d4 = dot(pos - p4, g4); // 11
+    
+
+    vec2 r = fract(pos);
+    float h1 = qerp(d1,d3, r.x);
+    float h2 = qerp(d2,d4, r.x);
+    float h =  qerp(h1,h2, r.y);
     return h;
 }
 
@@ -68,4 +75,5 @@ void main() {
     float h = perlin(clipPos.xz);
     // h = randVec2(vec2(12.,12.));
     frag_color = vec4(h1.x * 0,h1.y * 0,h,1.0);
+    frag_color = vec4(vCol, 1.0);
 }
