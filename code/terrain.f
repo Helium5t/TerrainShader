@@ -9,6 +9,8 @@ layout(set = 0, binding = 0, std140) uniform UBO{
     mat4 MVP; // [0-15]
     float displacementAmount; // 16
     float noise; // 17
+    vec2 offset; // 18-19
+    vec2 scale;  // 20-21
 };
 
 // This is what the fragment shader will output, usually just a pixel color
@@ -67,13 +69,23 @@ float perlin(vec2 pos){
     return h;
 }
 
+float fbm(vec2 pos){
+    float h = 0;
+    for (int i =1; i <= 1; i++){
+        h += perlin(pos * 1.1 * i) / (1.1*i);
+    }
+    return h;
+}
 
 void main() {
     // Convert from linear rgb to srgb for proper color output, ideally you'd do this as some final post processing effect because otherwise you will need to revert this gamma correction elsewhere
-    vec2 h1 = randVec2(ceil(clipPos.xz));
-    vec2 h2 = randVec2(floor(clipPos.xz));
-    float h = perlin(clipPos.xz);
+    // vec2 h1 = randVec2(ceil(clipPos.xz));
+    // vec2 h2 = randVec2(floor(clipPos.xz));
+    float h = fbm(clipPos.xz);
     // h = randVec2(vec2(12.,12.));
-    frag_color = vec4(h1.x * 0,h1.y * 0,h,1.0);
+    // frag_color = vec4(h1.x * 0,h1.y * 0,h,1.0);
+    vec4 noise_val = vec4(h,h,h,1.0);
     frag_color = vec4(vCol, 1.0);
+    frag_color = vec4(vCol.x, h, 0, 1.0);
+
 }

@@ -13,7 +13,7 @@ glow_intensity = 1.75
 glow_strength = 1.65
 glow_bloom = 0.33
 
-[sub_resource type="CompositorEffect" id="CompositorEffect_6uqi0"]
+[sub_resource type="CompositorEffect" id="CompositorEffect_8uh7m"]
 resource_local_to_scene = false
 resource_name = ""
 enabled = true
@@ -22,10 +22,15 @@ needs_motion_vectors = false
 needs_normal_roughness = false
 script = ExtResource("2_8uh7m")
 create_fb = true
+show_wireframe = false
+displacement_amt = 0.0
+dynamic_mesh = true
+vertex_density = 5
+plane_scale = 54.9
 metadata/_custom_type_script = "uid://c5mp21a1dgle8"
 
 [sub_resource type="Compositor" id="Compositor_ykrsh"]
-compositor_effects = Array[CompositorEffect]([SubResource("CompositorEffect_6uqi0")])
+compositor_effects = Array[CompositorEffect]([SubResource("CompositorEffect_8uh7m")])
 
 [node name="Test" type="Node3D"]
 

@@ -9,11 +9,16 @@ class_name HeliumTerrain extends CompositorEffect
 @export var noise_seed : int = 1
 
 @export_group("Mesh Generation")
-@export var dynamic_mesh : bool = false
+@export var dynamic_mesh : bool = true
 
-@export_range(2,1000, 1, "or_greater") var vertex_density : int = 5
+@export_range(2,200, 1, "prefer_slider") var vertex_density : int = 5
 
-@export_range(0.01, 1.0, 0.01, "or_greater") var plane_scale : float = 1.0
+@export_range(0.01, 50.0, 0.01, "or_greater") var plane_scale : float = 25.0
+
+@export var raw_scale = false
+
+@export var vert_offset : Vector2 = Vector2.ZERO;
+@export var vert_scale : Vector2 = Vector2.ONE;
 
 # Geometry and Scene vars (for Uniforms)
 var transform : Transform3D
@@ -94,7 +99,10 @@ func create_vertices() -> Array[Array]:
     var offset := (vertex_density-1) * plane_scale / 2.0
     for x in vertex_density:
         for z in vertex_density:
-            v.append_array([plane_scale*x - offset, 0, plane_scale*z - offset ])
+            if raw_scale:
+                v.append_array([(plane_scale*x - offset), 0, (plane_scale*z - offset) ])
+            else:
+                v.append_array([(plane_scale*x - offset)/vertex_density, 0, (plane_scale*z - offset)/vertex_density ])
             if x==0 or z == 0:
                 continue
             i.append_array([x*vertex_density + z, (x-1)*vertex_density + z, (x-1)*vertex_density + z -1])
@@ -149,6 +157,10 @@ func create_bind_uniform_buffers(render_data: RenderData):
         ubo_buffer.push_back(obj_to_clip[i/4][i%4])
     ubo_buffer.push_back(displacement_amt * plane_scale)
     ubo_buffer.push_back(noise_seed)
+    ubo_buffer.push_back(vert_offset.x)
+    ubo_buffer.push_back(vert_offset.y)
+    ubo_buffer.push_back(vert_scale.x)
+    ubo_buffer.push_back(vert_scale.y)
 
     # in std140 the base alignment (the one dictating the size) is always 4N, so the size of the buffer
     # always has to be a multiple of 16

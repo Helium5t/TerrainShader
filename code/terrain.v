@@ -7,6 +7,8 @@ layout(set = 0, binding = 0, std140) uniform UBO{
     mat4 MVP; // 0-15
     float displacementAmount; // 16
     float noise; // 17
+    vec2 offset; // 18-19
+    vec2 scale;  // 20-21
 };
 
 // This is what the vertex shader will output and send to the fragment shader.
@@ -45,16 +47,15 @@ float qerp(float from, float to, float t){
 }
 
 float perlin(vec2 pos){
-    pos += 0.0771;
     vec2 p1 = floor(pos);
-    vec2 p2 = vec2(floor(pos.x), ceil(pos.y ));
+    vec2 p2 = vec2(floor(pos.x), ceil(pos.y));
     vec2 p3 = vec2(ceil(pos.x), floor(pos.y));
     vec2 p4 = ceil(pos);
     // Gradients
-    vec2 g1 = randVec2(p1) ; 
-    vec2 g2 = randVec2(p2) ; 
-    vec2 g3 = randVec2(p3) ; 
-    vec2 g4 = randVec2(p4) ; 
+    vec2 g1 = randVec2(p1); 
+    vec2 g2 = randVec2(p2); 
+    vec2 g3 = randVec2(p3); 
+    vec2 g4 = randVec2(p4); 
     // Noise values (TODO: optimize the difference)
     float d1 = dot(pos - p1, g1); // 00
     float d2 = dot(pos - p2, g2); // 01
@@ -73,8 +74,8 @@ float perlin(vec2 pos){
 void main() {
     // The fragment shader also calculates the fractional brownian motion for pixel perfect normal vectors and lighting, so we pass the vertex position to the fragment shader
     clipPos = a_Position;
-    float h = perlin(clipPos.xz);
-    clipPos.y += perlin(clipPos.xz) * displacementAmount;   
+    float h = perlin((clipPos.xz* scale) + offset);
+    clipPos.y +=  h * displacementAmount;   
     // Multiply final vertex position with model/view/projection matrices to convert to clip space
     gl_Position = MVP*vec4(clipPos,1);
     vCol = vec3(h,h,h);
