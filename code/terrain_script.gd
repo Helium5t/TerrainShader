@@ -11,7 +11,7 @@ class_name HeliumTerrain extends CompositorEffect
 @export_group("Mesh Generation")
 @export var dynamic_mesh : bool = true
 
-@export_range(2,200, 1, "prefer_slider") var vertex_density : int = 5
+@export_range(2,400, 1, "prefer_slider") var vertex_density : int = 5
 
 @export_range(0.01, 50.0, 0.01, "or_greater") var plane_scale : float = 25.0
 

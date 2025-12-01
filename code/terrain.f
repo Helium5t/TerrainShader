@@ -39,32 +39,43 @@ vec2 randVec2(vec2 seed){
     return angle01ToVec2(hash(seed));// <--- problem is here since it's using pos rename global position variable
 }
 
+float quinticInterpolator(float t){
+    float t3 = pow(t,3);
+    return 6 * pow(t,2) * t3 - 15 * t3 * t + 10 * t3;
+}
+
 // Fifth order interpolant function from https://developer.nvidia.com/gpugems/gpugems/part-i-natural-effects/chapter-5-implementing-improved-perlin-noise
 float qerp(float from, float to, float t){
-    float q = 6 * pow(t,5) - 15 * pow(t,4) + 10 * pow(t,3);
+    float q = quinticInterpolator(t);
     return from * (1-q) + to * q;
 }
 
 float perlin(vec2 pos){
-    vec2 p1 = floor(pos);
-    vec2 p2 = vec2(floor(pos.x), ceil(pos.y));
-    vec2 p3 = vec2(ceil(pos.x), floor(pos.y));
-    vec2 p4 = ceil(pos);
+    vec2 f = floor(pos);
+    vec2 c = ceil(pos);
+    vec2 r = fract(pos);
+    vec2 rc = r-vec2(1.0); // Used to optimize computation of d. x - floor(x) = fract(x) and x-ceil(x) = fract(x) - 1.0
+
+    vec2 p1 = f; // 00
+    vec2 p2 = vec2(c.x, f.y); // 10
+    vec2 p3 = vec2(f.x, c.y); // 01
+    vec2 p4 = c;            // 11
     // Gradients
     vec2 g1 = randVec2(p1); 
     vec2 g2 = randVec2(p2); 
     vec2 g3 = randVec2(p3); 
     vec2 g4 = randVec2(p4); 
     // Noise values (TODO: optimize the difference)
-    float d1 = dot(pos - p1, g1); // 00
-    float d2 = dot(pos - p2, g2); // 01
-    float d3 = dot(pos - p3, g3); // 10
-    float d4 = dot(pos - p4, g4); // 11
+    float d1 = dot(r, g1)  ; // 00
+    float d2 = dot(vec2(rc.x, r.y) , g2); // 10
+    float d3 = dot(vec2(r.x, rc.y) , g3) ; // 01
+    float d4 = dot(rc, g4) ; // 11
     
-
-    vec2 r = fract(pos);
-    float h1 = qerp(d1,d3, r.x);
-    float h2 = qerp(d2,d4, r.x);
+    // idk if should use this one
+    // vec2 u = vec2(quinticInterpolator(r.x), quinticInterpolator(r.y));
+    // float noiseH = d1 + u.x * (d2 - d1) + u.y * (d3 - d1) + u.x * u.y * (d1 - d2 - d3 + d4);
+    float h1 = qerp(d1,d2, r.x);
+    float h2 = qerp(d3,d4, r.x);
     float h =  qerp(h1,h2, r.y);
     return h;
 }

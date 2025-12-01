@@ -24,9 +24,13 @@ script = ExtResource("2_8uh7m")
 create_fb = true
 show_wireframe = false
 displacement_amt = 0.0
+noise_seed = 521
 dynamic_mesh = true
-vertex_density = 5
-plane_scale = 54.9
+vertex_density = 100
+plane_scale = 24.13
+raw_scale = false
+vert_offset = Vector2(-0.01, 0)
+vert_scale = Vector2(1.09, 1.09)
 metadata/_custom_type_script = "uid://c5mp21a1dgle8"
 
 [sub_resource type="Compositor" id="Compositor_ykrsh"]
